@@ -38,7 +38,14 @@ export default function Signup() {
             setSuccess(res.data.message);
             setForm({ name: '', email: '', password: '', confirmPassword: '' });
         } catch (err) {
-            setError(err.response?.data?.detail || 'Signup failed. Please try again.');
+            const detail = err.response?.data?.detail;
+            if (detail) {
+                setError(detail);
+            } else if (err.request && !err.response) {
+                setError('Cannot connect to server. Please check if the backend is running.');
+            } else {
+                setError('Signup failed. Please try again.');
+            }
         }
         setLoading(false);
     };

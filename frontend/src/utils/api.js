@@ -10,6 +10,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 15000, // 15 second timeout
 });
 
 // Attach JWT token to every request
@@ -21,7 +22,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 responses globally (redirect to login)
+// Handle errors globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -29,6 +30,10 @@ api.interceptors.response.use(
       localStorage.removeItem('budgetiq_token');
       localStorage.removeItem('budgetiq_user');
       window.location.href = '/login';
+    }
+    // Log network errors for debugging
+    if (!error.response) {
+      console.error('Network error - backend may be unavailable:', error.message);
     }
     return Promise.reject(error);
   }

@@ -3,6 +3,7 @@ BudgetIQ – Main Application Entry Point
 FastAPI server with CORS, rate limiting, static file serving, and all route registrations.
 """
 import os
+import logging
 from dotenv import load_dotenv
 
 # Load .env file if present (for local development)
@@ -14,6 +15,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from database import engine, Base
 from config import FRONTEND_URL, UPLOAD_DIR
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 from rate_limiter import limiter, HAS_SLOWAPI
 
@@ -30,9 +34,9 @@ from routes.report_routes import router as report_router
 # Create all database tables (safe for production - uses IF NOT EXISTS)
 try:
     Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created/verified successfully.")
 except Exception as e:
-    import logging
-    logging.getLogger(__name__).warning(f"create_all skipped (tables may already exist): {e}")
+    logger.warning(f"create_all skipped (tables may already exist): {e}")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -48,22 +52,16 @@ if HAS_SLOWAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS middleware – allow frontend origins (dev + production)
-allowed_origins = [
-    FRONTEND_URL,
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
-# Filter out empty strings and duplicates
-allowed_origins = list(set(o for o in allowed_origins if o))
-
+# CORS middleware – allow ALL origins for maximum compatibility
+# The backend uses JWT tokens for security, not CORS restrictions.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+logger.info(f"CORS: allowing all origins. FRONTEND_URL={FRONTEND_URL}")
 
 # Serve uploaded profile pictures
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

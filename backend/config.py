@@ -33,7 +33,12 @@ MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 # Frontend URL (for CORS and email verification links)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+
+# Backend URL – auto-detect from RENDER_EXTERNAL_URL if available
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    os.getenv("RENDER_EXTERNAL_URL", "http://localhost:8000")
+)
 
 # Google Gemini API key (get free key at https://aistudio.google.com/apikey)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
