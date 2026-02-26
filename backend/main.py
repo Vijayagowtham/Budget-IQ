@@ -27,8 +27,12 @@ from routes.notification_routes import router as notification_router
 from routes.profile_routes import router as profile_router
 from routes.report_routes import router as report_router
 
-# Create all database tables
-Base.metadata.create_all(bind=engine)
+# Create all database tables (safe for production - uses IF NOT EXISTS)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    import logging
+    logging.getLogger(__name__).warning(f"create_all skipped (tables may already exist): {e}")
 
 # Initialize FastAPI app
 app = FastAPI(
