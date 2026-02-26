@@ -15,16 +15,7 @@ from fastapi.responses import JSONResponse
 from database import engine, Base
 from config import FRONTEND_URL, UPLOAD_DIR
 
-# Rate limiter setup
-try:
-    from slowapi import Limiter, _rate_limit_exceeded_handler
-    from slowapi.util import get_remote_address
-    from slowapi.errors import RateLimitExceeded
-    limiter = Limiter(key_func=get_remote_address)
-    _HAS_SLOWAPI = True
-except ImportError:
-    limiter = None
-    _HAS_SLOWAPI = False
+from rate_limiter import limiter, HAS_SLOWAPI
 
 # Import all route modules
 from routes.auth_routes import router as auth_router
@@ -47,7 +38,9 @@ app = FastAPI(
 )
 
 # Attach rate limiter to app
-if _HAS_SLOWAPI:
+if HAS_SLOWAPI:
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

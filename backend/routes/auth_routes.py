@@ -13,21 +13,8 @@ from email_utils import send_verification_email, send_password_reset_email
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
-# Rate limiter (imported from main.py where it's configured)
-try:
-    from main import limiter
-except ImportError:
-    limiter = None
-
-
-def _rate_limit(limit_string: str):
-    """Apply rate limit if slowapi is available, otherwise no-op."""
-    if limiter:
-        return limiter.limit(limit_string)
-    # Return a no-op decorator
-    def noop(func):
-        return func
-    return noop
+# Rate limiter (standalone module to avoid circular imports)
+from rate_limiter import limiter
 
 
 @router.post("/signup", response_model=MessageResponse)
