@@ -6,7 +6,7 @@ Falls back to rule-based analysis if no API key is configured.
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from models import Income, Expense
 from typing import List, Dict, Optional
 from config import GEMINI_API_KEY
@@ -66,7 +66,7 @@ def _build_system_prompt():
 
 def get_category_breakdown(db: Session, user_id: int, days: int = 30) -> Dict[str, float]:
     """Get expense breakdown by category for the last N days."""
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
     results = db.query(
         Expense.category,
         func.sum(Expense.amount).label("total")
@@ -81,7 +81,7 @@ def get_monthly_totals(db: Session, user_id: int, months_ago: int = 0):
     """Get income and expense totals for a specific month.
     Uses date-range filtering compatible with both SQLite and PostgreSQL.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     target_month = now.month - months_ago
     target_year = now.year
     while target_month <= 0:
@@ -146,7 +146,7 @@ def build_user_context(db: Session, user_id: int) -> str:
     recent = get_recent_transactions(db, user_id, 8)
 
     context_parts = [
-        f"=== USER FINANCIAL DATA (as of {datetime.utcnow().strftime('%d %b %Y')}) ===",
+        f"=== USER FINANCIAL DATA (as of {datetime.now(timezone.utc).strftime('%d %b %Y')}) ===",
         f"",
         f"This Month:",
         f"  Total Income: {current_income:,.0f}",
@@ -269,7 +269,7 @@ def generate_insights(db: Session, user_id: int) -> List[dict]:
         })
 
     # Daily expense reminder
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
     today_start = datetime.combine(today, datetime.min.time())
     today_end = today_start + timedelta(days=1)
     today_expenses = db.query(func.count(Expense.id)).filter(

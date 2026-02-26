@@ -3,8 +3,13 @@ BudgetIQ – SQLAlchemy Database Models
 """
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from database import Base
+
+
+def _utcnow():
+    """Timezone-aware UTC now (Python 3.12+ compatible)."""
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -17,7 +22,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_verified = Column(Boolean, default=False)
     avatar_path = Column(String(500), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     # Relationships
     incomes = relationship("Income", back_populates="user", cascade="all, delete-orphan")
@@ -34,7 +39,7 @@ class Income(Base):
     amount = Column(Float, nullable=False)
     source = Column(String(200), nullable=False)
     date = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     user = relationship("User", back_populates="incomes")
 
@@ -49,7 +54,7 @@ class Expense(Base):
     category = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     date = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     user = relationship("User", back_populates="expenses")
 
@@ -63,6 +68,6 @@ class Notification(Base):
     message = Column(Text, nullable=False)
     type = Column(String(50), default="info")  # info, warning, alert
     is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     user = relationship("User", back_populates="notifications")

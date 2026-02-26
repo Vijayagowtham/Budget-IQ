@@ -2,7 +2,7 @@
 BudgetIQ – Report Export Routes (PDF & Excel)
 """
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/reports", tags=["Reports"])
 
 def get_date_range(period: str):
     """Get start and end dates based on period (weekly or monthly)."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if period == "weekly":
         start = now - timedelta(days=7)
     else:

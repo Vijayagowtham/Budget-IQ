@@ -3,8 +3,7 @@ BudgetIQ – Database Connection & Session Management
 Supports both SQLite (local dev) and PostgreSQL (Supabase production).
 """
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from config import DATABASE_URL
 
 # Detect database type and configure engine accordingly
@@ -29,8 +28,11 @@ else:
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base class for all models
-Base = declarative_base()
+
+# Base class for all models (modern SQLAlchemy 2.0+ pattern)
+class Base(DeclarativeBase):
+    pass
+
 
 # Expose db type for query compatibility
 IS_SQLITE = _is_sqlite

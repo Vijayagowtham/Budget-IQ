@@ -6,13 +6,14 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Vite + React 18 with vanilla CSS |
+| Frontend | Vite + React 19 with vanilla CSS |
 | Backend | Python FastAPI |
-| Database | SQLite via SQLAlchemy |
+| Database | Supabase PostgreSQL (SQLite fallback for local dev) |
 | Auth | JWT with bcrypt password hashing |
-| AI | Rule-based analysis engine |
+| AI | Google Gemini LLM + rule-based fallback |
 | Charts | Recharts |
 | Export | ReportLab (PDF) + openpyxl (Excel) |
+| Deployment | Render (backend) + Vercel (frontend) |
 
 ## 🚀 Getting Started
 
@@ -45,7 +46,7 @@ The frontend starts at `http://localhost:5173`
 
 1. Open `http://localhost:5173` in your browser
 2. Click **Sign Up** to create an account
-3. Check the **backend terminal** for the email verification link
+3. Check the **backend terminal** for the email verification link (or your email if SMTP is configured)
 4. Open the verification link in your browser
 5. Log in with your credentials
 6. Start adding income and expenses!
@@ -55,14 +56,18 @@ The frontend starts at `http://localhost:5173`
 ```
 budgetiq/
 ├── backend/
-│   ├── main.py              # FastAPI entry point
-│   ├── config.py            # App configuration
-│   ├── database.py          # SQLAlchemy setup
-│   ├── models.py            # DB models
-│   ├── schemas.py           # Pydantic schemas
+│   ├── main.py              # FastAPI entry point + rate limiter
+│   ├── config.py            # App configuration (env vars)
+│   ├── database.py          # SQLAlchemy setup (SQLite/PostgreSQL)
+│   ├── models.py            # DB models (User, Income, Expense, Notification)
+│   ├── schemas.py           # Pydantic request/response schemas
 │   ├── auth.py              # JWT auth utilities
-│   ├── ai_engine.py         # AI insights engine
-│   ├── requirements.txt
+│   ├── ai_engine.py         # AI insights engine (Gemini + rules)
+│   ├── email_utils.py       # Email verification via SMTP
+│   ├── requirements.txt     # Pinned dependencies
+│   ├── Procfile             # Render deployment
+│   ├── .env.example         # Environment variables template
+│   ├── supabase_setup.sql   # Database schema + RLS policies
 │   ├── uploads/             # Profile pictures
 │   └── routes/
 │       ├── auth_routes.py
@@ -78,11 +83,11 @@ budgetiq/
 │   ├── src/
 │   │   ├── main.jsx
 │   │   ├── App.jsx
-│   │   ├── index.css
-│   │   ├── context/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   └── utils/
+│   │   ├── index.css         # 1500+ line design system
+│   │   ├── context/          # Auth + Theme providers
+│   │   ├── pages/            # Dashboard, Transactions, Profile, Reports, Login, Signup
+│   │   ├── components/       # Sidebar, Navbar, AiPanel, NotificationBell, etc.
+│   │   └── utils/api.js      # Axios client with JWT interceptor
 │   └── package.json
 └── README.md
 ```
@@ -112,16 +117,47 @@ budgetiq/
 | GET | `/api/reports/pdf?period=` | Download PDF |
 | GET | `/api/reports/excel?period=` | Download Excel |
 
+## 🔐 Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_DB_URL` | Production | PostgreSQL connection string |
+| `BUDGETIQ_SECRET_KEY` | Production | JWT signing key |
+| `FRONTEND_URL` | Production | Vercel deployment URL |
+| `BACKEND_URL` | Production | Render deployment URL |
+| `GEMINI_API_KEY` | Optional | Google Gemini for AI chat |
+| `SMTP_HOST` | Optional | SMTP server (e.g., smtp.gmail.com) |
+| `SMTP_PORT` | Optional | SMTP port (default: 587) |
+| `SMTP_USER` | Optional | SMTP username |
+| `SMTP_PASSWORD` | Optional | SMTP password / App Password |
+| `SMTP_FROM` | Optional | Sender email address |
+
+## 🚀 Deployment
+
+### Backend → Render
+1. Push to GitHub
+2. Create Web Service on [render.com](https://render.com)
+3. Root directory: `backend`
+4. Build: `pip install -r requirements.txt`
+5. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. Add environment variables
+
+### Frontend → Vercel
+1. Import on [vercel.com](https://vercel.com)
+2. Root directory: `frontend`
+3. Add env var: `VITE_API_URL=https://your-backend.onrender.com`
+
 ## ✨ Features
 
-- ✅ JWT Authentication with email verification
-- ✅ Dark & Light mode
-- ✅ Dashboard with interactive charts
-- ✅ Income & Expense tracking
-- ✅ AI-powered financial insights
-- ✅ Chatbot for finance Q&A
-- ✅ Notifications & alerts
-- ✅ Profile management with avatar
-- ✅ PDF & Excel report export
-- ✅ Responsive design
-- ✅ Secure logout on all pages
+- ✅ JWT Authentication with email verification (SMTP or console)
+- ✅ Dark & Light mode with smooth transitions
+- ✅ Dashboard with interactive bar/line charts
+- ✅ Income & Expense tracking with categories
+- ✅ AI-powered financial insights (Gemini LLM + rule-based)
+- ✅ AI Chatbot for personal finance Q&A
+- ✅ Notifications & alerts system
+- ✅ Profile management with avatar upload (5MB limit)
+- ✅ PDF & Excel report export with branding
+- ✅ Rate limiting on auth endpoints
+- ✅ Responsive glassmorphism design
+- ✅ Supabase PostgreSQL with SQLite fallback

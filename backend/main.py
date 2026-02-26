@@ -1,6 +1,6 @@
 """
 BudgetIQ – Main Application Entry Point
-FastAPI server with CORS, static file serving, and all route registrations.
+FastAPI server with CORS, rate limiting, static file serving, and all route registrations.
 """
 import os
 from dotenv import load_dotenv
@@ -8,11 +8,23 @@ from dotenv import load_dotenv
 # Load .env file if present (for local development)
 load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from database import engine, Base
 from config import FRONTEND_URL, UPLOAD_DIR
+
+# Rate limiter setup
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    limiter = Limiter(key_func=get_remote_address)
+    _HAS_SLOWAPI = True
+except ImportError:
+    limiter = None
+    _HAS_SLOWAPI = False
 
 # Import all route modules
 from routes.auth_routes import router as auth_router
@@ -33,6 +45,11 @@ app = FastAPI(
     description="AI-Based Personal Budget Management System",
     version="1.0.0"
 )
+
+# Attach rate limiter to app
+if _HAS_SLOWAPI:
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware – allow frontend origins (dev + production)
 allowed_origins = [

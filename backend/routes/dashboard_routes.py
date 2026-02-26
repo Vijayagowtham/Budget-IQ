@@ -4,7 +4,7 @@ BudgetIQ – Dashboard Routes (Summary & Chart Data)
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from database import get_db
 from models import Income, Expense, User
 from auth import get_current_user
@@ -42,7 +42,7 @@ def get_chart_data(
     user: User = Depends(get_current_user)
 ):
     """Get time-series income vs expense data for charts."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     data_points = []
 
     if period == "monthly":

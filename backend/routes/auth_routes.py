@@ -1,7 +1,7 @@
 """
 BudgetIQ – Auth Routes (Signup, Login, Email Verification, Forgot Password)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from database import get_db
@@ -9,13 +9,30 @@ from models import User
 from auth import hash_password, verify_password, create_access_token, create_verification_token, decode_token
 from schemas import SignupRequest, LoginRequest, ForgotPasswordRequest, TokenResponse, MessageResponse, UserResponse
 from config import BACKEND_URL, FRONTEND_URL
+from email_utils import send_verification_email, send_password_reset_email
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
+# Rate limiter (imported from main.py where it's configured)
+try:
+    from main import limiter
+except ImportError:
+    limiter = None
+
+
+def _rate_limit(limit_string: str):
+    """Apply rate limit if slowapi is available, otherwise no-op."""
+    if limiter:
+        return limiter.limit(limit_string)
+    # Return a no-op decorator
+    def noop(func):
+        return func
+    return noop
+
 
 @router.post("/signup", response_model=MessageResponse)
-def signup(req: SignupRequest, db: Session = Depends(get_db)):
-    """Register a new user and generate email verification link."""
+def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
+    """Register a new user and send email verification link."""
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -30,16 +47,13 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    # Generate verification token and log the link (simulated email)
+    # Generate verification token and send email
     token = create_verification_token(req.email)
     verify_url = f"{BACKEND_URL}/api/auth/verify-email?token={token}"
-    print(f"\n{'='*60}")
-    print(f"[EMAIL VERIFY] Link for {req.email}:")
-    print(f"   {verify_url}")
-    print(f"{'='*60}\n")
+    send_verification_email(req.email, verify_url)
 
     return {
-        "message": "Account created! A verification link has been sent to your email. Please check the server console for the verification link."
+        "message": "Account created! A verification link has been sent to your email. Please check your email (or the server console) for the verification link."
     }
 
 
@@ -84,7 +98,7 @@ def verify_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate user and return JWT access token."""
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.hashed_password):
@@ -104,17 +118,15 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    """Simulate sending a password reset link."""
+def forgot_password(request: Request, req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Send a password reset link via email."""
     user = db.query(User).filter(User.email == req.email).first()
     if not user:
         return {"message": "If this email is registered, a password reset link has been sent."}
 
     token = create_access_token(data={"sub": user.email, "purpose": "password_reset"})
     reset_url = f"{BACKEND_URL}/api/auth/reset-password?token={token}"
-    print(f"\n{'='*60}")
-    print(f"[PASSWORD RESET] Link for {req.email}:")
-    print(f"   {reset_url}")
-    print(f"{'='*60}\n")
+    send_password_reset_email(req.email, reset_url)
 
-    return {"message": "If this email is registered, a password reset link has been sent (check server console)."}
+    return {"message": "If this email is registered, a password reset link has been sent (check your email or server console)."}
+

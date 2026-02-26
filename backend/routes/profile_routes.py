@@ -9,9 +9,12 @@ from database import get_db
 from models import User
 from auth import get_current_user
 from schemas import UserResponse, ProfileUpdateRequest
-from config import UPLOAD_DIR
+from config import UPLOAD_DIR, MAX_AVATAR_SIZE
 
 router = APIRouter(prefix="/api/profile", tags=["Profile"])
+
+# Allowed avatar file extensions
+ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
 
 
 @router.get("", response_model=UserResponse)
@@ -52,8 +55,20 @@ async def upload_avatar(
     if file.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Only JPEG, PNG, GIF, or WebP images are allowed")
 
+    # Validate extension against whitelist
+    ext = (file.filename.rsplit(".", 1)[-1].lower()) if file.filename and "." in file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid file extension '.{ext}'. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+
+    # Read content and enforce size limit
+    content = await file.read()
+    if len(content) > MAX_AVATAR_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large ({len(content) / 1024 / 1024:.1f}MB). Maximum size is {MAX_AVATAR_SIZE / 1024 / 1024:.0f}MB."
+        )
+
     # Generate unique filename
-    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
     filename = f"{user.id}_{uuid.uuid4().hex[:8]}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
 
@@ -64,7 +79,6 @@ async def upload_avatar(
             os.remove(old_path)
 
     # Save new avatar
-    content = await file.read()
     with open(filepath, "wb") as f:
         f.write(content)
 
