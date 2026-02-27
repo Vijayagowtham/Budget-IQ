@@ -2,8 +2,10 @@
  * BudgetIQ – Transactions Page (Professional Icons, No Emojis)
  */
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Wallet, Plus, List, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Plus, List, Trash2 } from 'lucide-react';
 import api from '../utils/api';
+import { useToast } from '../context/ToastContext';
+import Skeleton from '../components/Skeleton';
 
 export default function Transactions() {
     const [incomes, setIncomes] = useState([]);
@@ -12,8 +14,7 @@ export default function Transactions() {
     const [loading, setLoading] = useState(true);
     const [incomeForm, setIncomeForm] = useState({ amount: '', source: '', date: '' });
     const [expenseForm, setExpenseForm] = useState({ amount: '', category: '', description: '', date: '' });
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const { success, error } = useToast();
     const categories = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Rent', 'Other'];
 
     useEffect(() => { fetchData(); }, []);
@@ -32,41 +33,52 @@ export default function Transactions() {
     const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
     const balance = totalIncome - totalExpense;
     const formatCurrency = (val) => `₹${val.toLocaleString('en-IN')}`;
-    const clearMessages = () => { setTimeout(() => { setError(''); setSuccess(''); }, 3000); };
 
     const addIncome = async (e) => {
-        e.preventDefault(); setError(''); setSuccess('');
+        e.preventDefault();
         try {
             const res = await api.post('/api/income', { amount: parseFloat(incomeForm.amount), source: incomeForm.source, date: new Date(incomeForm.date).toISOString() });
             setIncomes([res.data, ...incomes]);
             setIncomeForm({ amount: '', source: '', date: '' });
-            setSuccess('Income added successfully!'); clearMessages();
-        } catch (err) { setError(err.response?.data?.detail || 'Failed to add income'); clearMessages(); }
+            success('Income added successfully!');
+        } catch (err) { error(err.response?.data?.detail || 'Failed to add income'); }
     };
 
     const addExpense = async (e) => {
-        e.preventDefault(); setError(''); setSuccess('');
+        e.preventDefault();
         try {
             const res = await api.post('/api/expenses', { amount: parseFloat(expenseForm.amount), category: expenseForm.category, description: expenseForm.description, date: new Date(expenseForm.date).toISOString() });
             setExpenses([res.data, ...expenses]);
             setExpenseForm({ amount: '', category: '', description: '', date: '' });
-            setSuccess('Expense added successfully!'); clearMessages();
-        } catch (err) { setError(err.response?.data?.detail || 'Failed to add expense'); clearMessages(); }
+            success('Expense added successfully!');
+        } catch (err) { error(err.response?.data?.detail || 'Failed to add expense'); }
     };
 
     const deleteIncome = async (id) => {
-        try { await api.delete(`/api/income/${id}`); setIncomes(incomes.filter((i) => i.id !== id)); setSuccess('Income deleted'); clearMessages(); }
-        catch (err) { setError('Failed to delete'); clearMessages(); }
+        try { await api.delete(`/api/income/${id}`); setIncomes(incomes.filter((i) => i.id !== id)); success('Income deleted'); }
+        catch (err) { error('Failed to delete'); }
     };
 
     const deleteExpense = async (id) => {
-        try { await api.delete(`/api/expenses/${id}`); setExpenses(expenses.filter((e) => e.id !== id)); setSuccess('Expense deleted'); clearMessages(); }
-        catch (err) { setError('Failed to delete'); clearMessages(); }
+        try { await api.delete(`/api/expenses/${id}`); setExpenses(expenses.filter((e) => e.id !== id)); success('Expense deleted'); }
+        catch (err) { error('Failed to delete'); }
     };
 
     const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    if (loading) return <div className="page-container"><div className="spinner" /></div>;
+    if (loading) {
+        return (
+            <div className="page-container">
+                <div className="summary-cards">
+                    <Skeleton height="100px" />
+                    <Skeleton height="100px" />
+                    <Skeleton height="100px" />
+                </div>
+                <Skeleton height="40px" width="200px" style={{ marginBottom: 24 }} />
+                <Skeleton height="300px" />
+            </div>
+        );
+    }
 
     return (
         <div className="page-container">
@@ -84,9 +96,6 @@ export default function Transactions() {
                     <div className="summary-info"><h3>Balance</h3><div className="amount" style={{ color: balance >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>{formatCurrency(balance)}</div></div>
                 </div>
             </div>
-
-            {error && <div className="alert alert-error"><AlertCircle size={16} /> {error}</div>}
-            {success && <div className="alert alert-success"><CheckCircle size={16} /> {success}</div>}
 
             <div className="tabs">
                 <button className={`tab-btn ${activeTab === 'income' ? 'active' : ''}`} onClick={() => setActiveTab('income')}>

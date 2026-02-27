@@ -1517,3 +1517,132 @@ a:hover {
   opacity: 1;
   background: rgba(255, 82, 82, 0.1);
 }
+
+/* ─── Skeleton Loaders ───────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--bg-tertiary) 25%,
+      var(--border-light) 50%,
+      var(--bg-tertiary) 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg,
+      var(--border-light) 25%,
+      var(--border) 50%,
+      var(--border-light) 75%);
+  background-size: 400% 100%;
+}
+
+/* ─── Toast Notifications ────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 9999;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 400px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.toast::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 4px;
+}
+
+.toast-success::before {
+  background: var(--accent-green);
+}
+
+.toast-error::before {
+  background: var(--accent-red);
+}
+
+.toast-info::before {
+  background: var(--primary);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.toast-success .toast-icon {
+  color: var(--accent-green);
+}
+
+.toast-error .toast-icon {
+  color: var(--accent-red);
+}
+
+.toast-info .toast-icon {
+  color: var(--primary);
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  transition: all var(--transition-fast);
+}
+
+.toast-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* ─── Error Boundary ─────────────────────────────── */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px;
+  text-align: center;
+  background: var(--bg-primary);
+}
+
+.error-boundary h1 {
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.error-boundary p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  max-width: 500px;
+}

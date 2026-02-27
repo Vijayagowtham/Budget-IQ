@@ -13,9 +13,14 @@ router = APIRouter(prefix="/api/income", tags=["Income"])
 
 
 @router.get("", response_model=List[IncomeResponse])
-def get_incomes(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_incomes(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db), 
+    user: User = Depends(get_current_user)
+):
     """Get all income entries for the authenticated user."""
-    return db.query(Income).filter(Income.user_id == user.id).order_by(Income.date.desc()).all()
+    return db.query(Income).filter(Income.user_id == user.id).order_by(Income.date.desc()).offset(skip).limit(limit).all()
 
 
 @router.post("", response_model=IncomeResponse)

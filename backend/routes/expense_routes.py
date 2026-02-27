@@ -13,9 +13,14 @@ router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
 
 
 @router.get("", response_model=List[ExpenseResponse])
-def get_expenses(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_expenses(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db), 
+    user: User = Depends(get_current_user)
+):
     """Get all expense entries for the authenticated user."""
-    return db.query(Expense).filter(Expense.user_id == user.id).order_by(Expense.date.desc()).all()
+    return db.query(Expense).filter(Expense.user_id == user.id).order_by(Expense.date.desc()).offset(skip).limit(limit).all()
 
 
 @router.post("", response_model=ExpenseResponse)

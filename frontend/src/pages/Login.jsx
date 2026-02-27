@@ -5,18 +5,18 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, LogIn, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { Mail, Lock, LogIn } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 import Logo from '../components/Logo';
 import api from '../utils/api';
 
 export default function Login() {
     const { login, isAuthenticated } = useAuth();
+    const { success: toastSuccess, error: toastError } = useToast();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [form, setForm] = useState({ email: '', password: '' });
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
 
     // Redirect if already authenticated
@@ -29,25 +29,23 @@ export default function Login() {
         const verified = searchParams.get('verified');
         const message = searchParams.get('message');
         if (verified === 'success') {
-            setSuccess(message || 'Email verified successfully! You can now sign in.');
+            toastSuccess(message || 'Email verified successfully! You can now sign in.');
         } else if (verified === 'already') {
-            setSuccess(message || 'Email already verified. You can sign in.');
+            toastSuccess(message || 'Email already verified. You can sign in.');
         } else if (verified === 'error') {
-            setError(message || 'Email verification failed. Please try again.');
+            toastError(message || 'Email verification failed. Please try again.');
         }
-    }, [searchParams]);
+    }, [searchParams, toastSuccess, toastError]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
         setLoading(true);
         try {
             const res = await api.post('/api/auth/login', form);
             login(res.data.access_token, res.data.user);
             navigate('/dashboard');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Login failed. Please try again.');
+            toastError(err.response?.data?.detail || 'Login failed. Please try again.');
         }
         setLoading(false);
     };
@@ -64,19 +62,7 @@ export default function Login() {
                 </div>
                 <h2>Sign In</h2>
 
-                {success && (
-                    <div className="alert alert-success">
-                        <CheckCircle size={16} /> {success}
-                    </div>
-                )}
-
-                {error && (
-                    <div className="alert alert-error">
-                        <AlertCircle size={16} /> {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} autoComplete="off">
                     <div className="form-group">
                         <label><Mail size={14} style={{ marginRight: 4, verticalAlign: '-2px' }} /> Email</label>
                         <input
@@ -97,6 +83,7 @@ export default function Login() {
                             value={form.password}
                             onChange={(e) => setForm({ ...form, password: e.target.value })}
                             required
+                            autoComplete="new-password"
                         />
                     </div>
                     <div style={{ textAlign: 'right', marginBottom: 16 }}>

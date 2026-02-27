@@ -20,6 +20,7 @@ from rate_limiter import limiter
 
 
 @router.post("/signup", response_model=MessageResponse)
+@limiter.limit("5/minute")
 def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
     """Register a new user and send email verification link."""
     try:
@@ -54,7 +55,8 @@ def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/verify-email")
-def verify_email(token: str, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def verify_email(request: Request, token: str, db: Session = Depends(get_db)):
     """Verify user email and redirect to frontend login with status."""
     try:
         payload = decode_token(token)
@@ -94,6 +96,7 @@ def verify_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate user and return JWT access token."""
     try:
@@ -120,6 +123,7 @@ def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("3/minute")
 def forgot_password(request: Request, req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """Send a password reset link via email."""
     user = db.query(User).filter(User.email == req.email).first()
