@@ -12,10 +12,11 @@ export default function Transactions() {
     const [expenses, setExpenses] = useState([]);
     const [activeTab, setActiveTab] = useState('income');
     const [loading, setLoading] = useState(true);
-    const [incomeForm, setIncomeForm] = useState({ amount: '', source: '', date: '' });
+    const [incomeForm, setIncomeForm] = useState({ amount: '', source: '', category: '', date: '' });
     const [expenseForm, setExpenseForm] = useState({ amount: '', category: '', description: '', date: '' });
     const { success, error } = useToast();
-    const categories = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Rent', 'Other'];
+    const expenseCategories = ['Food', 'Transport', 'Shopping', 'Entertainment', 'Bills', 'Health', 'Education', 'Rent', 'Other'];
+    const incomeCategories = ['Salary', 'Freelance', 'Investments', 'Business', 'Gifts', 'Other'];
 
     useEffect(() => { fetchData(); }, []);
 
@@ -37,9 +38,9 @@ export default function Transactions() {
     const addIncome = async (e) => {
         e.preventDefault();
         try {
-            const res = await api.post('/api/income', { amount: parseFloat(incomeForm.amount), source: incomeForm.source, date: new Date(incomeForm.date).toISOString() });
+            const res = await api.post('/api/income', { amount: parseFloat(incomeForm.amount), source: incomeForm.source, category: incomeForm.category, date: new Date(incomeForm.date).toISOString() });
             setIncomes([res.data, ...incomes]);
-            setIncomeForm({ amount: '', source: '', date: '' });
+            setIncomeForm({ amount: '', source: '', category: '', date: '' });
             success('Income added successfully!');
         } catch (err) { error(err.response?.data?.detail || 'Failed to add income'); }
     };
@@ -113,7 +114,8 @@ export default function Transactions() {
                         <form onSubmit={addIncome}>
                             <div className="form-row">
                                 <div className="form-group"><label>Amount</label><input type="number" className="form-input" placeholder="Enter amount" value={incomeForm.amount} onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })} required min="0.01" step="0.01" /></div>
-                                <div className="form-group"><label>Source</label><input type="text" className="form-input" placeholder="e.g., Salary, Freelance" value={incomeForm.source} onChange={(e) => setIncomeForm({ ...incomeForm, source: e.target.value })} required /></div>
+                                <div className="form-group"><label>Source</label><input type="text" className="form-input" placeholder="e.g., Company Name" value={incomeForm.source} onChange={(e) => setIncomeForm({ ...incomeForm, source: e.target.value })} required /></div>
+                                <div className="form-group"><label>Category</label><select className="form-select" value={incomeForm.category} onChange={(e) => setIncomeForm({ ...incomeForm, category: e.target.value })} required><option value="">Select category</option>{incomeCategories.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
                                 <div className="form-group"><label>Date</label><input type="date" className="form-input" value={incomeForm.date} onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })} required /></div>
                             </div>
                             <div className="form-actions"><button type="submit" className="btn btn-success"><Plus size={16} /> Add Income</button></div>
@@ -124,9 +126,9 @@ export default function Transactions() {
                         {incomes.length === 0 ? (
                             <div className="empty-state"><TrendingUp size={36} style={{ opacity: 0.3 }} /><p>No income entries yet</p></div>
                         ) : (
-                            <div className="table-wrapper"><table className="data-table"><thead><tr><th>Date</th><th>Source</th><th>Amount</th><th></th></tr></thead><tbody>
+                            <div className="table-wrapper"><table className="data-table"><thead><tr><th>Date</th><th>Category</th><th>Source</th><th>Amount</th><th></th></tr></thead><tbody>
                                 {incomes.map((i) => (
-                                    <tr key={i.id}><td>{formatDate(i.date)}</td><td>{i.source}</td><td className="amount-positive">{formatCurrency(i.amount)}</td>
+                                    <tr key={i.id}><td>{formatDate(i.date)}</td><td>{i.category}</td><td>{i.source}</td><td className="amount-positive">{formatCurrency(i.amount)}</td>
                                         <td><button className="delete-btn" onClick={() => deleteIncome(i.id)}><Trash2 size={16} /></button></td></tr>
                                 ))}
                             </tbody></table></div>
@@ -142,7 +144,7 @@ export default function Transactions() {
                         <form onSubmit={addExpense}>
                             <div className="form-row">
                                 <div className="form-group"><label>Amount</label><input type="number" className="form-input" placeholder="Enter amount" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} required min="0.01" step="0.01" /></div>
-                                <div className="form-group"><label>Category</label><select className="form-select" value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} required><option value="">Select category</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+                                <div className="form-group"><label>Category</label><select className="form-select" value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} required><option value="">Select category</option>{expenseCategories.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
                                 <div className="form-group"><label>Date</label><input type="date" className="form-input" value={expenseForm.date} onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })} required /></div>
                             </div>
                             <div className="form-group"><label>Description (Optional)</label><input type="text" className="form-input" placeholder="e.g., Lunch at restaurant" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} /></div>

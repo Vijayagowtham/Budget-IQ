@@ -46,6 +46,16 @@ def get_chart_data(
     data_points = []
 
     if period == "monthly":
+        # Calculate balance BEFORE the 6-month window to start the running total
+        start_of_window = (now.replace(day=1) - timedelta(days=5 * 30)).replace(day=1)
+        prior_income = db.query(func.coalesce(func.sum(Income.amount), 0)).filter(
+            Income.user_id == user.id, Income.date < start_of_window
+        ).scalar()
+        prior_expense = db.query(func.coalesce(func.sum(Expense.amount), 0)).filter(
+            Expense.user_id == user.id, Expense.date < start_of_window
+        ).scalar()
+        running_net_worth = float(prior_income) - float(prior_expense)
+
         # Last 6 months
         for i in range(5, -1, -1):
             month_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1)
@@ -66,11 +76,24 @@ def get_chart_data(
                 Expense.date < month_end
             ).scalar()
 
+            running_net_worth += (float(income) - float(expense))
             label = month_start.strftime("%b %Y")
             data_points.append(ChartDataPoint(
-                label=label, income=float(income), expense=float(expense)
+                label=label, income=float(income), expense=float(expense), net_worth=running_net_worth
             ))
     else:
+        # Calculate balance BEFORE the 8-week window
+        start_of_window = now - timedelta(weeks=7, days=now.weekday())
+        start_of_window = start_of_window.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        prior_income = db.query(func.coalesce(func.sum(Income.amount), 0)).filter(
+            Income.user_id == user.id, Income.date < start_of_window
+        ).scalar()
+        prior_expense = db.query(func.coalesce(func.sum(Expense.amount), 0)).filter(
+            Expense.user_id == user.id, Expense.date < start_of_window
+        ).scalar()
+        running_net_worth = float(prior_income) - float(prior_expense)
+
         # Last 8 weeks
         for i in range(7, -1, -1):
             week_start = now - timedelta(weeks=i, days=now.weekday())
@@ -89,9 +112,10 @@ def get_chart_data(
                 Expense.date < week_end
             ).scalar()
 
+            running_net_worth += (float(income) - float(expense))
             label = f"Week {week_start.strftime('%d/%m')}"
             data_points.append(ChartDataPoint(
-                label=label, income=float(income), expense=float(expense)
+                label=label, income=float(income), expense=float(expense), net_worth=running_net_worth
             ))
 
     return data_points

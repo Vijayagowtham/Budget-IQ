@@ -30,6 +30,7 @@ def add_income(req: IncomeCreate, db: Session = Depends(get_db), user: User = De
         user_id=user.id,
         amount=req.amount,
         source=req.source,
+        category=req.category,
         date=req.date
     )
     db.add(income)

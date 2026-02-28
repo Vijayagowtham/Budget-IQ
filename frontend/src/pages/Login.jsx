@@ -86,6 +86,17 @@ export default function Login() {
                             autoComplete="new-password"
                         />
                     </div>
+                    <div className="form-group">
+                        <label className="flex items-center" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                            <input
+                                type="checkbox"
+                                checked={form.remember_me || false}
+                                onChange={(e) => setForm({ ...form, remember_me: e.target.checked })}
+                                style={{ width: '16px', height: '16px', accentColor: 'var(--primary)' }}
+                            />
+                            Remember Me
+                        </label>
+                    </div>
                     <div style={{ textAlign: 'right', marginBottom: 16 }}>
                         <Link to="/forgot-password" className="link-btn">Forgot Password?</Link>
                     </div>

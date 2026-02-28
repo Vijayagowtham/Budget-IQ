@@ -1,25 +1,58 @@
 """
 BudgetIQ – Email Utility
-Sends verification and password reset emails via SMTP.
-Falls back to console print if SMTP is not configured (local dev).
+Sends verification and password reset emails via Resend API.
+Falls back to SMTP, then to console print if nothing is configured.
+Uses background threading so email sending never blocks API responses.
 """
 import logging
 import smtplib
+import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from config import SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+from config import (
+    RESEND_API_KEY, RESEND_FROM,
+    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+)
 
 logger = logging.getLogger(__name__)
 
-# Check if SMTP is configured
+# Check which email provider is configured
+_RESEND_CONFIGURED = bool(RESEND_API_KEY)
 _SMTP_CONFIGURED = bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD)
 
+# SMTP connection timeout (seconds)
+_SMTP_TIMEOUT = 10
 
-def _send_email(to_email: str, subject: str, html_body: str) -> bool:
-    """Send an email via SMTP. Returns True on success."""
-    if not _SMTP_CONFIGURED:
+if _RESEND_CONFIGURED:
+    logger.info("Email provider: Resend API")
+elif _SMTP_CONFIGURED:
+    logger.info("Email provider: SMTP")
+else:
+    logger.warning("No email provider configured – verification links will print to console")
+
+
+def _send_via_resend(to_email: str, subject: str, html_body: str) -> bool:
+    """Send an email via Resend API. Returns True on success."""
+    try:
+        import resend
+        resend.api_key = RESEND_API_KEY
+
+        params = {
+            "from": RESEND_FROM,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_body,
+        }
+        result = resend.Emails.send(params)
+        logger.info(f"Email sent via Resend to {to_email}: {subject} (id: {result.get('id', 'N/A')})")
+        return True
+    except Exception as e:
+        logger.error(f"Resend failed for {to_email}: {e}")
         return False
 
+
+def _send_via_smtp(to_email: str, subject: str, html_body: str) -> bool:
+    """Send an email via SMTP. Returns True on success."""
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
@@ -27,20 +60,49 @@ def _send_email(to_email: str, subject: str, html_body: str) -> bool:
         msg["To"] = to_email
         msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=_SMTP_TIMEOUT) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(msg["From"], to_email, msg.as_string())
 
-        logger.info(f"Email sent to {to_email}: {subject}")
+        logger.info(f"Email sent via SMTP to {to_email}: {subject}")
         return True
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(
+            f"SMTP authentication failed: {e}. "
+            "If using Gmail, you need an App Password – see https://myaccount.google.com/apppasswords"
+        )
+        return False
     except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.error(f"SMTP failed for {to_email}: {e}")
         return False
 
 
+def _send_email(to_email: str, subject: str, html_body: str) -> bool:
+    """Send email using the best available provider. Returns True on success."""
+    if _RESEND_CONFIGURED:
+        return _send_via_resend(to_email, subject, html_body)
+    elif _SMTP_CONFIGURED:
+        return _send_via_smtp(to_email, subject, html_body)
+    return False
+
+
+def _send_email_async(to_email: str, subject: str, html_body: str, fallback_label: str, fallback_url: str) -> None:
+    """Send email in a background thread. Falls back to console on failure."""
+    def _worker():
+        sent = _send_email(to_email, subject, html_body)
+        if not sent:
+            print(f"\n{'='*60}")
+            print(f"[{fallback_label}] Link for {to_email}:")
+            print(f"   {fallback_url}")
+            print(f"{'='*60}\n")
+
+    thread = threading.Thread(target=_worker, daemon=True)
+    thread.start()
+
+
 def send_verification_email(to_email: str, verify_url: str) -> None:
-    """Send email verification link. Falls back to console if SMTP not configured."""
+    """Send email verification link asynchronously."""
     html = f"""
     <div style="font-family: 'Inter', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -73,17 +135,11 @@ def send_verification_email(to_email: str, verify_url: str) -> None:
         </div>
     </div>
     """
-    sent = _send_email(to_email, "BudgetIQ – Verify Your Email", html)
-    if not sent:
-        # Fallback: print to console (for local dev / no SMTP)
-        print(f"\n{'='*60}")
-        print(f"[EMAIL VERIFY] Link for {to_email}:")
-        print(f"   {verify_url}")
-        print(f"{'='*60}\n")
+    _send_email_async(to_email, "BudgetIQ – Verify Your Email", html, "EMAIL VERIFY", verify_url)
 
 
 def send_password_reset_email(to_email: str, reset_url: str) -> None:
-    """Send password reset link. Falls back to console if SMTP not configured."""
+    """Send password reset link asynchronously."""
     html = f"""
     <div style="font-family: 'Inter', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -111,9 +167,4 @@ def send_password_reset_email(to_email: str, reset_url: str) -> None:
         </div>
     </div>
     """
-    sent = _send_email(to_email, "BudgetIQ – Password Reset", html)
-    if not sent:
-        print(f"\n{'='*60}")
-        print(f"[PASSWORD RESET] Link for {to_email}:")
-        print(f"   {reset_url}")
-        print(f"{'='*60}\n")
+    _send_email_async(to_email, "BudgetIQ – Password Reset", html, "PASSWORD RESET", reset_url)

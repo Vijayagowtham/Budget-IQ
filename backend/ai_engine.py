@@ -54,7 +54,8 @@ STRICT RULES:
 5. Use plain text formatting. Use line breaks for readability but no markdown.
 6. When giving advice, be specific and actionable based on the user's actual numbers.
 7. If the user has no data yet, encourage them to start adding income and expenses.
-8. Always be encouraging and supportive about financial progress."""
+8. Always be encouraging and supportive about financial progress.
+9. Use the 'Predictive Budget' (if available) to warn the user if they're likely to overspend next month and suggest preventative measures."""
 
 
 def _build_system_prompt():
@@ -136,6 +137,34 @@ def get_recent_transactions(db: Session, user_id: int, limit: int = 10) -> str:
     return "\n".join(lines) if lines else "No transactions recorded yet."
 
 
+def get_predictive_budgeting_context(db: Session, user_id: int) -> str:
+    """Calculate 3-month average spending to project next month's budget."""
+    now = datetime.now(timezone.utc)
+    # Start of 3 months ago
+    since = (now.replace(day=1) - timedelta(days=90)).replace(day=1)
+    
+    results = db.query(
+        Expense.category,
+        func.sum(Expense.amount).label("total")
+    ).filter(
+        Expense.user_id == user_id,
+        Expense.date >= since
+    ).group_by(Expense.category).all()
+    
+    if not results:
+        return "Predictive Budget: Not enough data for projection."
+        
+    lines = ["Predictive Budget (Next Month Projection based on 3-month avg):"]
+    total_proj = 0
+    for row in results:
+        avg_monthly = float(row.total) / 3.0
+        total_proj += avg_monthly
+        lines.append(f"  - {row.category}: ~{avg_monthly:,.0f} expected")
+    lines.append(f"  - Total Projected Expenses: ~{total_proj:,.0f}")
+    
+    return "\n".join(lines)
+
+
 def build_user_context(db: Session, user_id: int) -> str:
     """Build a comprehensive financial context string for the LLM."""
     current_income, current_expense = get_monthly_totals(db, user_id, 0)
@@ -144,6 +173,7 @@ def build_user_context(db: Session, user_id: int) -> str:
     categories = get_category_breakdown(db, user_id, 30)
     total_expense_30d = sum(categories.values()) if categories else 0
     recent = get_recent_transactions(db, user_id, 8)
+    predictive = get_predictive_budgeting_context(db, user_id)
 
     context_parts = [
         f"=== USER FINANCIAL DATA (as of {datetime.now(timezone.utc).strftime('%d %b %Y')}) ===",
@@ -176,7 +206,7 @@ def build_user_context(db: Session, user_id: int) -> str:
             context_parts.append(f"  {cat}: {amt:,.0f} ({pct:.0f}%)")
         context_parts.append(f"  Total: {total_expense_30d:,.0f}")
 
-    context_parts.extend(["", recent])
+    context_parts.extend(["", predictive, "", recent])
 
     return "\n".join(context_parts)
 

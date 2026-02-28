@@ -2,13 +2,13 @@
 BudgetIQ – Auth Routes (Signup, Login, Email Verification, Forgot Password)
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 from auth import hash_password, verify_password, create_access_token, create_verification_token, decode_token
-from schemas import SignupRequest, LoginRequest, ForgotPasswordRequest, TokenResponse, MessageResponse, UserResponse
+from schemas import SignupRequest, LoginRequest, ForgotPasswordRequest, ResetPasswordRequest, TokenResponse, MessageResponse, UserResponse
 from config import BACKEND_URL, FRONTEND_URL
 from email_utils import send_verification_email, send_password_reset_email
 
@@ -21,7 +21,7 @@ from rate_limiter import limiter
 
 @router.post("/signup", response_model=MessageResponse)
 @limiter.limit("5/minute")
-def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
+def signup(request: Request, req: SignupRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Register a new user and send email verification link."""
     try:
         existing = db.query(User).filter(User.email == req.email).first()
@@ -38,10 +38,10 @@ def signup(request: Request, req: SignupRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-        # Generate verification token and send email
+        # Generate verification token and queue email in background
         token = create_verification_token(req.email)
         verify_url = f"{BACKEND_URL}/api/auth/verify-email?token={token}"
-        send_verification_email(req.email, verify_url)
+        background_tasks.add_task(send_verification_email, req.email, verify_url)
 
         return {
             "message": "Account created! A verification link has been sent to your email. Please check your email (or the server console) for the verification link."
@@ -110,7 +110,11 @@ def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
                 detail="Please verify your email before logging in. Check your email for the verification link."
             )
 
-        access_token = create_access_token(data={"sub": user.email})
+        # Extend token expiration if "Remember Me" is checked (30 days instead of 30 minutes)
+        from datetime import timedelta
+        expires_delta = timedelta(days=30) if getattr(req, "remember_me", False) else None
+        
+        access_token = create_access_token(data={"sub": user.email}, expires_delta=expires_delta)
         return TokenResponse(
             access_token=access_token,
             user=UserResponse.model_validate(user)
@@ -124,15 +128,43 @@ def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password", response_model=MessageResponse)
 @limiter.limit("3/minute")
-def forgot_password(request: Request, req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def forgot_password(request: Request, req: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Send a password reset link via email."""
     user = db.query(User).filter(User.email == req.email).first()
     if not user:
         return {"message": "If this email is registered, a password reset link has been sent."}
 
     token = create_access_token(data={"sub": user.email, "purpose": "password_reset"})
-    reset_url = f"{BACKEND_URL}/api/auth/reset-password?token={token}"
-    send_password_reset_email(req.email, reset_url)
+    # Only for demonstration/local testing we expose the link, in production it goes by email.
+    reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
+    background_tasks.add_task(send_password_reset_email, req.email, reset_url)
 
     return {"message": "If this email is registered, a password reset link has been sent (check your email or server console)."}
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+@limiter.limit("5/minute")
+def reset_password(request: Request, req: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Reset the password using the token sent via email."""
+    try:
+        payload = decode_token(req.token)
+        if payload.get("purpose") != "password_reset":
+            raise HTTPException(status_code=400, detail="Invalid token purpose")
+            
+        email = payload.get("sub")
+        user = db.query(User).filter(User.email == email).first()
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        user.hashed_password = hash_password(req.new_password)
+        db.commit()
+        
+        return {"message": "Password successfully reset. You can now log in with your new password."}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Password reset error: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
 

@@ -38,6 +38,7 @@ class Income(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     amount = Column(Float, nullable=False)
     source = Column(String(200), nullable=False)
+    category = Column(String(100), nullable=False, default="Other")
     date = Column(DateTime, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 

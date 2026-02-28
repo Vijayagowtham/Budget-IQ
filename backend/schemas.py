@@ -16,9 +16,14 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+    remember_me: bool = False
 
 class ForgotPasswordRequest(BaseModel):
     email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=6, max_length=128)
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -52,12 +57,14 @@ class ProfileUpdateRequest(BaseModel):
 class IncomeCreate(BaseModel):
     amount: float = Field(..., gt=0)
     source: str = Field(..., min_length=1, max_length=200)
+    category: str = Field(..., min_length=1, max_length=100)
     date: datetime
 
 class IncomeResponse(BaseModel):
     id: int
     amount: float
     source: str
+    category: str
     date: datetime
     created_at: datetime
 
@@ -98,6 +105,7 @@ class ChartDataPoint(BaseModel):
     label: str
     income: float
     expense: float
+    net_worth: float
 
 
 # ─── AI / Chat Schemas ──────────────────────────────────

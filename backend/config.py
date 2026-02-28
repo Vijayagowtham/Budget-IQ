@@ -43,8 +43,11 @@ BACKEND_URL = os.getenv(
 # Google Gemini API key (get free key at https://aistudio.google.com/apikey)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# SMTP Email Settings (for verification emails)
-# Falls back to console print if not configured
+# Resend Email API (recommended – sign up free at https://resend.com)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM = os.getenv("RESEND_FROM", "BudgetIQ <onboarding@resend.dev>")  # Use your verified domain in production
+
+# SMTP Email settings (fallback – used if Resend is not configured)
 SMTP_HOST = os.getenv("SMTP_HOST", "")          # e.g. smtp.gmail.com
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))   # 587 for TLS
 SMTP_USER = os.getenv("SMTP_USER", "")           # e.g. your@gmail.com
