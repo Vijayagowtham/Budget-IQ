@@ -72,11 +72,11 @@ export default function Profile() {
                         <label>Member Since</label>
                         <input type="text" className="form-input" value={user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : ''} disabled />
                     </div>
-                    <div className="form-actions" style={{ justifyContent: 'space-between' }}>
+                    <div className="form-actions" style={{ justifyContent: 'space-between', position: 'relative', zIndex: 20 }}>
                         <button type="submit" className="btn btn-primary" disabled={saving}>
                             <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
                         </button>
-                        <button type="button" className="btn btn-danger" onClick={handleLogout}>
+                        <button type="button" className="btn btn-danger" onClick={handleLogout} style={{ cursor: 'pointer' }}>
                             <LogOut size={16} /> Logout
                         </button>
                     </div>

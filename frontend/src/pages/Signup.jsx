@@ -1,8 +1,9 @@
 /**
  * BudgetIQ – Signup Page (Professional Icons, No Emojis)
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { UserPlus, Mail, Lock, User } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
@@ -11,8 +12,14 @@ import api from '../utils/api';
 
 export default function Signup() {
     const { success: toastSuccess, error: toastError } = useToast();
+    const { logout } = useAuth();
     const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
     const [loading, setLoading] = useState(false);
+
+    // Clear any existing session when landing on signup
+    useEffect(() => {
+        logout();
+    }, [logout]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -35,6 +42,9 @@ export default function Signup() {
             });
             toastSuccess(res.data.message || 'Account created successfully! Please check your email to verify.');
             setForm({ name: '', email: '', password: '', confirmPassword: '' });
+            // Redirect to login page with a query param instruction
+            // Use window.location or navigate if available
+            window.location.href = '/login?verified=pending&message=Account+created!+Please+verify+your+email+before+logging+in.';
         } catch (err) {
             const detail = err.response?.data?.detail;
             if (detail) {

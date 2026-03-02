@@ -45,7 +45,14 @@ export default function Login() {
             login(res.data.access_token, res.data.user);
             navigate('/dashboard');
         } catch (err) {
-            toastError(err.response?.data?.detail || 'Login failed. Please try again.');
+            const status = err.response?.status;
+            const detail = err.response?.data?.detail;
+
+            if (status === 403 && detail && detail.includes("verify your email")) {
+                toastError("⚠️ Verification Required: Please check your email (or server console) for the verification link before logging in.");
+            } else {
+                toastError(detail || 'Login failed. Please verify your credentials and try again.');
+            }
         }
         setLoading(false);
     };

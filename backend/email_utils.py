@@ -91,11 +91,14 @@ def _send_email_async(to_email: str, subject: str, html_body: str, fallback_labe
     """Send email in a background thread. Falls back to console on failure."""
     def _worker():
         sent = _send_email(to_email, subject, html_body)
+        
+        # WE ALWAYS PRINT THE URL IN DEV/DEBUG FOR EASY TESTING
+        print(f"\n{'='*60}")
         if not sent:
-            print(f"\n{'='*60}")
-            print(f"[{fallback_label}] Link for {to_email}:")
-            print(f"   {fallback_url}")
-            print(f"{'='*60}\n")
+             print(f"🚨 EMAIL DELIVERY FAILED 🚨")
+        print(f"[{fallback_label}] Link for {to_email}:")
+        print(f"   {fallback_url}")
+        print(f"{'='*60}\n")
 
     thread = threading.Thread(target=_worker, daemon=True)
     thread.start()

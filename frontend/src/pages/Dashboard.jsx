@@ -213,7 +213,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <button className="btn btn-primary" onClick={() => setAiOpen(true)} style={{ position: 'fixed', bottom: 24, right: 24, borderRadius: 'var(--radius-full)', padding: '14px 24px', zIndex: 50 }}>
+            <button className="btn btn-primary" onClick={() => setAiOpen(true)} style={{ position: 'fixed', bottom: 24, right: 24, borderRadius: 'var(--radius-full)', padding: '14px 24px', zIndex: 999 }}>
                 <Brain size={20} /> AI Insights
             </button>
             <AiPanel isOpen={aiOpen} onClose={() => setAiOpen(false)} />

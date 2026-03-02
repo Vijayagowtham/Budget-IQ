@@ -24,6 +24,11 @@ export default function Navbar() {
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
 
+    // Also close the user menu when the route changes
+    useEffect(() => {
+        setMenuOpen(false);
+    }, [location.pathname]);
+
     const handleLogout = () => {
         logout();
         navigate('/login');
