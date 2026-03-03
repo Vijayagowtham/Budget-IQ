@@ -80,11 +80,18 @@ def _send_via_smtp(to_email: str, subject: str, html_body: str) -> bool:
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:
     """Send email using the best available provider. Returns True on success."""
+    sent = False
+    
+    # Try Resend first if configured
     if _RESEND_CONFIGURED:
-        return _send_via_resend(to_email, subject, html_body)
-    elif _SMTP_CONFIGURED:
-        return _send_via_smtp(to_email, subject, html_body)
-    return False
+        sent = _send_via_resend(to_email, subject, html_body)
+        
+    # Fallback to SMTP if Resend fails or is unconfigured
+    if not sent and _SMTP_CONFIGURED:
+        logger.info("Falling back to SMTP for email delivery...")
+        sent = _send_via_smtp(to_email, subject, html_body)
+        
+    return sent
 
 
 def _send_email_async(to_email: str, subject: str, html_body: str, fallback_label: str, fallback_url: str) -> None:

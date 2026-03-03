@@ -31,5 +31,10 @@ uploads/*
 .DS_Store
 Thumbs.db
 
+# Sensitive tokens (dev/test artifacts)
+token.txt
+token2.txt
+reset_link.txt
+
 # Node
 node_modules/
