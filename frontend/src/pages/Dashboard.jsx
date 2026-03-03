@@ -90,7 +90,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="dashboard-charts" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+            <div className="dashboard-charts">
                 {/* Pie Chart */}
                 <div className="chart-container" style={{ margin: 0 }}>
                     <div className="chart-header">

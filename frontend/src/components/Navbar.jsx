@@ -1,15 +1,15 @@
 /**
- * BudgetIQ – Navbar (Lucide Icons, No Emojis)
+ * BudgetIQ – Navbar (Responsive with hamburger menu)
  */
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Menu } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
 import { UPLOADS_URL } from '../utils/api';
 
-export default function Navbar() {
+export default function Navbar({ onMenuToggle }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -51,6 +51,9 @@ export default function Navbar() {
     return (
         <nav className="navbar">
             <div className="navbar-left">
+                <button className="hamburger-btn" onClick={onMenuToggle} aria-label="Toggle menu">
+                    <Menu size={22} />
+                </button>
                 <h1>{getTitle()}</h1>
             </div>
             <div className="navbar-right">

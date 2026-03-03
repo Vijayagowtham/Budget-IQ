@@ -1,7 +1,8 @@
 /**
  * BudgetIQ – App Root
- * React Router setup with protected routes and layout
+ * React Router setup with protected routes, responsive layout
  */
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -21,13 +22,15 @@ import Transactions from './pages/Transactions';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports';
 
-// Layout wrapper for authenticated pages
+// Layout wrapper for authenticated pages with responsive sidebar
 function AppLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="app-layout">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div style={{ flex: 1 }}>
-        <Navbar />
+        <Navbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         <div className="main-content">
           {children}
         </div>
