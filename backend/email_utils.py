@@ -23,11 +23,28 @@ _SMTP_CONFIGURED = bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD)
 # SMTP connection timeout (seconds)
 _SMTP_TIMEOUT = 10
 
+# ─── Startup credential validation ───
 if _RESEND_CONFIGURED:
     logger.info("Email provider: Resend API")
-elif _SMTP_CONFIGURED:
+    if "resend.dev" in (RESEND_FROM or ""):
+        logger.warning(
+            "⚠️  Resend is using the sandbox sender 'onboarding@resend.dev'. "
+            "Emails will ONLY be delivered to the Resend account owner's address. "
+            "To send to any user, add and verify your own domain at https://resend.com/domains"
+        )
+
+if _SMTP_CONFIGURED:
     logger.info("Email provider: SMTP")
-else:
+    # Gmail App Passwords are exactly 16 lowercase letters (no spaces when stored)
+    clean_pw = SMTP_PASSWORD.replace(" ", "")
+    if SMTP_HOST == "smtp.gmail.com" and (len(clean_pw) != 16 or not clean_pw.isalpha()):
+        logger.warning(
+            "⚠️  SMTP_PASSWORD does not look like a Gmail App Password! "
+            "Gmail REQUIRES an App Password (16 letters) — plain passwords are blocked. "
+            "Generate one at: https://myaccount.google.com/apppasswords"
+        )
+
+if not _RESEND_CONFIGURED and not _SMTP_CONFIGURED:
     logger.warning("No email provider configured – verification links will print to console")
 
 

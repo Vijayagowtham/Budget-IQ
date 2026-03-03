@@ -40,11 +40,10 @@ export default function Signup() {
                 email: form.email,
                 password: form.password,
             });
-            toastSuccess(res.data.message || 'Account created successfully! Please check your email to verify.');
+            toastSuccess(res.data.message || 'Account created successfully! You can now sign in.');
             setForm({ name: '', email: '', password: '', confirmPassword: '' });
-            // Redirect to login page with a query param instruction
-            // Use window.location or navigate if available
-            window.location.href = '/login?verified=pending&message=Account+created!+Please+verify+your+email+before+logging+in.';
+            // Redirect to login page — account is auto-verified
+            window.location.href = '/login?verified=success&message=Account+created+successfully!+You+can+now+sign+in.';
         } catch (err) {
             const detail = err.response?.data?.detail;
             if (detail) {

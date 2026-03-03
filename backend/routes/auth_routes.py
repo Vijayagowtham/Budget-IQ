@@ -32,19 +32,14 @@ def signup(request: Request, req: SignupRequest, background_tasks: BackgroundTas
             name=req.name,
             email=req.email,
             hashed_password=hash_password(req.password),
-            is_verified=False
+            is_verified=True  # Auto-verify: no email verification required
         )
         db.add(user)
         db.commit()
         db.refresh(user)
 
-        # Generate verification token and queue email in background
-        token = create_verification_token(req.email)
-        verify_url = f"{BACKEND_URL}/api/auth/verify-email?token={token}"
-        background_tasks.add_task(send_verification_email, req.email, verify_url)
-
         return {
-            "message": "Account created! A verification link has been sent to your email. Please check your email (or the server console) for the verification link."
+            "message": "Account created successfully! You can now sign in."
         }
     except HTTPException:
         raise
